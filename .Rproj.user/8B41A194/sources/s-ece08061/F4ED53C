@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1536681715830.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "34|30|36|0|\n38|33|43|0|\n45|41|54|0|\n131|16|156|0|\n174|25|182|0|\n184|21|195|0|\n197|23|214|0|\n",
+    "hash" : "0",
+    "id" : "F4ED53C",
+    "lastKnownWriteTime" : 1536689953,
+    "last_content_update" : 1536689953153,
+    "path" : "~/fast_bind/network_builder/network_builder.js",
+    "project_path" : "network_builder.js",
+    "properties" : {
+        "cursorPosition" : "94,13",
+        "scrollLine" : "73",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : true,
+    "source_window" : "",
+    "type" : "js"
+}
