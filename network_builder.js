@@ -2,12 +2,26 @@
 //
 // r2d3: https://rstudio.github.io/r2d3
 //
-
-const svg = div.append('svg').at({height,width});
-const tooltip = div.selectAppend('div.tooltip')
-  .classed('hidden', true)
+const drag_hist = {started: {}, ended: {}};
+let editing_node = -1;
+let currently_dragging = false;
 
 const padding = 15;
+
+// starter data
+let net_data = ({
+  nodes: [
+    {id:1, group:null, x:0.3,  y:0.3 },
+    {id:2, group:null, x:0.6 , y:0.3 },
+    {id:3, group:null, x:0.3 , y:0.6 },
+    {id:4, group:null, x:0.6 , y:0.6 }
+  ],
+  links: [
+    {source: 1, target:2},
+    {source: 1, target:3},
+    {source: 4, target:1},
+  ],
+});
 
 const x = d3.scaleLinear()
   .domain([0,1])
@@ -17,20 +31,38 @@ const y = d3.scaleLinear()
   .domain([0,1])
   .range([height-padding, padding]);
 
-let net_data = ({
-  nodes: [
-    {id:1, group:'a', x:0.3,  y:0.3 },
-    {id:2, group:'b', x:0.6 , y:0.3 },
-    {id:3, group:'c', x:0.3 , y:0.6 },
-    {id:4, group:'b', x:0.6 , y:0.6 }
-  ],
-  links: [
-    {source: 1, target:2},
-    {source: 1, target:3},
-    {source: 2, target:3},     
-    {source: 4, target:1},
-  ],
-});
+const svg = div.append('svg').at({height,width});
+
+const tooltip = div.selectAppend('div.tooltip')
+  .classed('hidden', true);
+
+const networkViz = svg.selectAppend('g.mainViz');
+
+const groupChooser = tooltip.append('form');
+
+groupChooser.on('submit', function(){
+  d3.event.preventDefault();
+  
+  const group_value = d3.select(this).select('input').property('value');
+  
+  net_data.nodes.forEach(node => {
+    if(node.id == editing_node){
+      node.group = group_value
+    }
+  });  
+  
+  tooltip
+    .classed('pinned', false)
+    .classed('hidden', true);
+})
+
+// the line that gets shown when the user is drawing a link.
+const drawnLink = svg.selectAppend("line.drawn")
+  .at({
+    strokeWidth: 2, 
+    stroke: 'red',
+  });
+  
 
 function getNodeById(id,data){
   return data.nodes.filter(node => node.id === id)[0];
@@ -54,13 +86,6 @@ function findClosestNode(data, location){
   return getNodeById(closest_id, data);
 }
 
-const drawnLink = svg.selectAppend("line.drawn")
-  .at({
-    strokeWidth: 2, 
-    stroke: 'red',
-  });
-  
-const networkViz = svg.selectAppend('g.mainViz');
   
 function drawNetwork(data,svg){
   svg.html('');
@@ -84,36 +109,42 @@ function drawNetwork(data,svg){
       .attr("r", 5)
       .attr("fill", 'steelblue');
   
-  svg.selectAll('circle')
-     .on('click', function(d){
-    console.log('clicked the node!');
-  });
-  
-  
   node
     .on('mouseover', function(d){
+      if(currently_dragging) return;
       tooltip
         .classed('hidden', false)
         .st({
           left: `${d3.event.pageX}px`,
           top: `${d3.event.pageY}px`
-        })
-        .html(`<h2>ID: ${d.id}</h2>
-               <p><strong>Group:</strong><input type='text' name='group' id='group'> </p>`)
-  })
-  .on('mouseout', function(d){
-    if(d.clickedOn){
-      console.log('pinning tooltip')
-    } else {
-      tooltip.classed('hidden', true)   
-    }
-  })
-  .on('mousedown',function(d){
-    d.clickedOn = true;
-  })
-  
+        });
+      
+      if(!tooltip.classed('pinned')){
+        groupChooser
+          .html(`
+          <h2>${d.group ? 'Group ' + d.group : 'No group'}</h2>
+          Click node to edit group`);  
+      }  
+      
+    })
+    .on('mouseout', function(d){
+      if( tooltip.classed('pinned')){ return; }
 
+      tooltip.classed('hidden', true);
+    })
+    .on('mousedown',function(d){
+      if(!tooltip.classed('pinned')){
+        editing_node = d.id;
+        
+        groupChooser.html(`
+         Enter Group: <input type="text">
+         <input type="submit">`
+        );
+      }
+      tooltip.classed('pinned', !tooltip.classed('pinned'));
+    });
   
+  // places nodes and links in right locations
   node
     .at({
       cx: d => x(d.x),
@@ -129,33 +160,6 @@ function drawNetwork(data,svg){
     });
 }
 
-function drag(){
-  return simulation => {
-  
-    function dragstarted(d) {
-      if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
-    }
-    
-    function dragged(d) {
-      d.fx = d3.event.x;
-      d.fy = d3.event.y;
-    }
-    
-    function dragended(d) {
-      if (!d3.event.active) simulation.alphaTarget(0);
-      d.fx = null;
-      d.fy = null;
-    }
-    
-    return d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended);
-  };
-}
-
 svg.on('dblclick', function(){
   const xPos = x.invert(d3.event.offsetX);
   const yPos = y.invert(d3.event.offsetY);
@@ -163,14 +167,16 @@ svg.on('dblclick', function(){
   net_data.nodes.push({id: lastId + 1, x: xPos, y: yPos, group: null});
 
   drawNetwork(net_data,networkViz);
+}).on('click', function(){
+  tooltip
+    .classed('pinned', false)
+    .classed('hidden', true);
 });
 
 svg.call(d3.drag()
         .on("start", dragstarted)
         .on("drag", dragged)
         .on("end", dragended));
-
-const drag_hist = {started: {}, ended: {}};
 
 function dragstarted(d) {
   const location = {x: x.invert(d3.event.x), y: y.invert(d3.event.y)};
@@ -180,6 +186,8 @@ function dragstarted(d) {
     y: location.y,
     closest: findClosestNode(net_data, location),
   };
+    
+  currently_dragging = true;
 }
 
 function dragged(d) {
@@ -212,6 +220,7 @@ function dragended(d) {
   
   drawNetwork(net_data,networkViz);
   drawnLink.attr('opacity', 0);
+  currently_dragging = false;
 }
 
 drawNetwork(net_data,networkViz);
