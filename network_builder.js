@@ -9,7 +9,7 @@ let currently_dragging = false;
 const padding = 15;
 
 // starter data
-let net_data = ({
+let net_data = {
   nodes: [
     {id:1, group:null, x:0.3,  y:0.3 },
     {id:2, group:null, x:0.6 , y:0.3 },
@@ -21,7 +21,7 @@ let net_data = ({
     {source: 1, target:3},
     {source: 4, target:1},
   ],
-});
+};
 
 const x = d3.scaleLinear()
   .domain([0,1])
@@ -31,10 +31,31 @@ const y = d3.scaleLinear()
   .domain([0,1])
   .range([height-padding, padding]);
 
+const groupColors = d3.scaleOrdinal(d3.schemeAccent);
+  //.domain(['none', 'a']);
+
 const svg = div.append('svg').at({height,width});
 
 const tooltip = div.selectAppend('div.tooltip')
   .classed('hidden', true);
+
+const exportButton = div.selectAppend('div.export')
+  .classed('overlays', true)
+  .append('button')
+  .text('Download Network');
+  
+const clearButton = div.selectAppend('div.clear')
+  .classed('overlays', true)
+  .append('button')
+  .text('Clear Network')
+  .on('click',function(){
+    net_data = {
+      nodes: [{id:1, group:null, x:0.5,  y:0.5 }],
+      links: [],
+    }
+    
+    drawNetwork(net_data,networkViz);
+  })
 
 const networkViz = svg.selectAppend('g.mainViz');
 
@@ -54,6 +75,8 @@ groupChooser.on('submit', function(){
   tooltip
     .classed('pinned', false)
     .classed('hidden', true);
+  
+  drawNetwork(net_data,networkViz);
 })
 
 // the line that gets shown when the user is drawing a link.
@@ -63,6 +86,15 @@ const drawnLink = svg.selectAppend("line.drawn")
     stroke: 'red',
   });
   
+function downloadTextFile(data) {
+  const name = 'myNetwork.json';
+  const text = JSON.stringify(data);
+  const a = document.createElement('a');
+  const type = name.split(".").pop();
+  a.href = URL.createObjectURL( new Blob([text], { type:`text/${type === "txt" ? "plain" : type}` }) );
+  a.download = name;
+  a.click();
+}
 
 function getNodeById(id,data){
   return data.nodes.filter(node => node.id === id)[0];
@@ -107,7 +139,7 @@ function drawNetwork(data,svg){
     .data(nodes)
     .enter().append("circle")
       .attr("r", 5)
-      .attr("fill", 'steelblue');
+      .attr("fill", d =>  groupColors(d.group ? d.group : 'none'));
   
   node
     .on('mouseover', function(d){
@@ -158,6 +190,11 @@ function drawNetwork(data,svg){
       y1: d => y(d.source.y),
       y2: d => y(d.target.y)
     });
+    
+  // Update the download button for the latest data. 
+  exportButton.on('click', function(){
+    downloadTextFile(data);
+  });
 }
 
 svg.on('dblclick', function(){
@@ -213,12 +250,19 @@ function dragended(d) {
     closest: findClosestNode(net_data, location),
   };
   
-  net_data.links.push({
-    source: drag_hist.started.closest.id,
-    target: drag_hist.ended.closest.id,  
-  });
+  const source = drag_hist.started.closest.id;
+  const target = drag_hist.ended.closest.id;
   
-  drawNetwork(net_data,networkViz);
+  if(source != target){
+     net_data.links.push({
+      source: drag_hist.started.closest.id,
+      target: drag_hist.ended.closest.id,  
+    });
+    
+    drawNetwork(net_data,networkViz);
+  }
+  
+ 
   drawnLink.attr('opacity', 0);
   currently_dragging = false;
 }

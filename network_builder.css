@@ -8,6 +8,28 @@ div.tooltip {
     border-radius: 8px;			
 }
 
+.overlays {
+  position: absolute;
+  width: 150px;
+  height: 50px;
+}
+div.export {
+  right: 10px;
+  bottom: 10px;
+}
+
+div.clear {
+  top: 10px;
+  left: 10px;
+}
+
+button{
+  width: 100%;
+  height: 100%;
+  font-family: optima;
+  border-radius:10px;
+}
+
 .tooltip input {
   width: 100%;
 }
