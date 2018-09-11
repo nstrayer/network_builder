@@ -23,6 +23,8 @@ let net_data = {
   ],
 };
 
+
+// scales for x and y and colors
 const x = d3.scaleLinear()
   .domain([0,1])
   .range([padding, width-padding]);
@@ -32,12 +34,14 @@ const y = d3.scaleLinear()
   .range([height-padding, padding]);
 
 const groupColors = d3.scaleOrdinal(d3.schemeAccent);
-  //.domain(['none', 'a']);
 
 const svg = div.append('svg').at({height,width});
+const networkViz = svg.selectAppend('g.mainViz');
 
 const tooltip = div.selectAppend('div.tooltip')
   .classed('hidden', true);
+
+const groupChooser = tooltip.append('form');
 
 const exportButton = div.selectAppend('div.export')
   .classed('overlays', true)
@@ -49,18 +53,23 @@ const clearButton = div.selectAppend('div.clear')
   .append('button')
   .text('Clear Network')
   .on('click',function(){
+    // reset network data to a single central node
     net_data = {
       nodes: [{id:1, group:null, x:0.5,  y:0.5 }],
       links: [],
-    }
-    
+    };
+    // redraw
     drawNetwork(net_data,networkViz);
   })
+  
+// the line that gets shown when the user is drawing a link.
+const drawnLink = svg.selectAppend("line.drawn")
+  .at({
+    strokeWidth: 2, 
+    stroke: 'red',
+  });
 
-const networkViz = svg.selectAppend('g.mainViz');
-
-const groupChooser = tooltip.append('form');
-
+// when we submit the form we want to update our data. 
 groupChooser.on('submit', function(){
   d3.event.preventDefault();
   
@@ -68,24 +77,16 @@ groupChooser.on('submit', function(){
   
   net_data.nodes.forEach(node => {
     if(node.id == editing_node){
-      node.group = group_value
+      node.group = group_value;
     }
   });  
-  
-  tooltip
-    .classed('pinned', false)
-    .classed('hidden', true);
-  
-  drawNetwork(net_data,networkViz);
-})
 
-// the line that gets shown when the user is drawing a link.
-const drawnLink = svg.selectAppend("line.drawn")
-  .at({
-    strokeWidth: 2, 
-    stroke: 'red',
-  });
-  
+  tooltip.classed('hidden', true);
+
+  drawNetwork(net_data,networkViz);
+});
+
+
 function downloadTextFile(data) {
   const name = 'myNetwork.json';
   const text = JSON.stringify(data);
@@ -121,59 +122,47 @@ function findClosestNode(data, location){
   
 function drawNetwork(data,svg){
   svg.html('');
+  tooltip.classed('hidden', true);
   
   const links = data.links.map(d => Object.create(d));
   const nodes = data.nodes.map(d => Object.create(d));
 
-  const link = svg.append("g")
-      .attr("stroke", "#999")
+  const link = svg.append("g.links")
     .selectAll("line")
     .data(links.map(edge => getEdgeLocs(data, edge)))
-    .enter().append("line")
-      .attr("stroke-width", 1);
-  
-  const node = svg.append("g")
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 1.5)
+    .enter().append("line");
+
+  const node = svg.append("g.nodes")
     .selectAll("circle")
     .data(nodes)
     .enter().append("circle")
-      .attr("r", 5)
+      .attr("r", 15)
       .attr("fill", d =>  groupColors(d.group ? d.group : 'none'));
+  
+  node.append("title")
+    .text(d => d.group ? d.group : 'No group');
   
   node
     .on('mouseover', function(d){
       if(currently_dragging) return;
+    })
+    .on('mouseout', function(d){
+    })
+    .on('mousedown',function(d){
+      editing_node = d.id;
+      // user has clicked on a node
       tooltip
         .classed('hidden', false)
         .st({
-          left: `${d3.event.pageX}px`,
-          top: `${d3.event.pageY}px`
+          left: `${x(d.x)}px`,
+          top: `${y(d.y)}px`
         });
-      
-      if(!tooltip.classed('pinned')){
-        groupChooser
+        
+      groupChooser
           .html(`
           <h2>${d.group ? 'Group ' + d.group : 'No group'}</h2>
-          Click node to edit group`);  
-      }  
-      
-    })
-    .on('mouseout', function(d){
-      if( tooltip.classed('pinned')){ return; }
-
-      tooltip.classed('hidden', true);
-    })
-    .on('mousedown',function(d){
-      if(!tooltip.classed('pinned')){
-        editing_node = d.id;
-        
-        groupChooser.html(`
-         Enter Group: <input type="text">
-         <input type="submit">`
-        );
-      }
-      tooltip.classed('pinned', !tooltip.classed('pinned'));
+          Edit Group: <input type="text">
+          <input type="submit">`);  
     });
   
   // places nodes and links in right locations
@@ -192,23 +181,22 @@ function drawNetwork(data,svg){
     });
     
   // Update the download button for the latest data. 
-  exportButton.on('click', function(){
-    downloadTextFile(data);
-  });
+  exportButton.on('click', () => downloadTextFile(data));
 }
 
-svg.on('dblclick', function(){
-  const xPos = x.invert(d3.event.offsetX);
-  const yPos = y.invert(d3.event.offsetY);
-  const lastId = net_data.nodes[net_data.nodes.length-1].id;
-  net_data.nodes.push({id: lastId + 1, x: xPos, y: yPos, group: null});
-
-  drawNetwork(net_data,networkViz);
-}).on('click', function(){
-  tooltip
-    .classed('pinned', false)
-    .classed('hidden', true);
-});
+svg
+  .on('dblclick', function(){
+    if(!tooltip.classed('hidden')){
+      tooltip.classed('hidden', true);
+      return;
+    }
+    const xPos = x.invert(d3.event.offsetX);
+    const yPos = y.invert(d3.event.offsetY);
+    const lastId = net_data.nodes[net_data.nodes.length-1].id;
+    net_data.nodes.push({id: lastId + 1, x: xPos, y: yPos, group: null});
+  
+    drawNetwork(net_data,networkViz);
+  });
 
 svg.call(d3.drag()
         .on("start", dragstarted)
@@ -238,6 +226,7 @@ function dragged(d) {
       y1: y(drag_hist.started.closest.y),
       y2: current_y,
     });
+    tooltip.classed('hidden', true);
 }
 
 function dragended(d) {
@@ -262,7 +251,6 @@ function dragended(d) {
     drawNetwork(net_data,networkViz);
   }
   
- 
   drawnLink.attr('opacity', 0);
   currently_dragging = false;
 }

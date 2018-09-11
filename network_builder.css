@@ -37,3 +37,14 @@ button{
 .hidden {
   display: none;
 }
+
+.links line {
+  stroke: #999;
+  stroke-width: 10px;
+}
+
+.nodes circle {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
