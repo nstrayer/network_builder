@@ -35,11 +35,14 @@ const y = d3.scaleLinear()
 
 const groupColors = d3.scaleOrdinal(d3.schemeAccent);
 
+
 const svg = div.append('svg').at({height,width});
 const networkViz = svg.selectAppend('g.mainViz');
 
 const tooltip = div.selectAppend('div.tooltip')
   .classed('hidden', true);
+
+const deleteButton = tooltip.append('button').text('Delete Node');
 
 const groupChooser = tooltip.append('form');
 
@@ -60,6 +63,14 @@ const clearButton = div.selectAppend('div.clear')
     };
     // redraw
     drawNetwork(net_data,networkViz);
+  })
+
+const instructionsButton = div.selectAppend('div.showInstruction')
+  .classed('overlays', true)
+  .append('button')
+  .text('How to use')
+  .on('click',function(){
+    instructions.classed('hidden', false)
   })
   
 // the line that gets shown when the user is drawing a link.
@@ -119,7 +130,6 @@ function findClosestNode(data, location){
   return getNodeById(closest_id, data);
 }
 
-  
 function drawNetwork(data,svg){
   svg.html('');
   tooltip.classed('hidden', true);
@@ -158,11 +168,23 @@ function drawNetwork(data,svg){
           top: `${y(d.y)}px`
         });
         
+      deleteButton
+       .on('click', function(){
+         // get rid of node
+         data.nodes = data.nodes.filter(node => node.id !== d.id);
+         
+         // get rid of any links to this node.    
+         data.links = data.links.filter(link => !(link.source === d.id || link.target == d.id));
+        
+         // update network 
+         drawNetwork(data,networkViz);
+       })
+        
       groupChooser
-          .html(`
-          <h2>${d.group ? 'Group ' + d.group : 'No group'}</h2>
-          Edit Group: <input type="text">
-          <input type="submit">`);  
+        .html(`
+        <h2>${d.group ? 'Group ' + d.group : 'No group'}</h2>
+        Edit Group: <input type="text">
+        <input type="submit">`);  
     });
   
   // places nodes and links in right locations
@@ -178,6 +200,16 @@ function drawNetwork(data,svg){
       x2: d => x(d.target.x),
       y1: d => y(d.source.y),
       y2: d => y(d.target.y)
+    })
+    .on('mouseover', function(d){
+      d3.select(this).classed('selected', true);
+    })
+    .on('click', function(d){
+      data.links = data.links.filter( link => !(link.source === d.source.id && link.target === d.target.id));
+      drawNetwork(data,networkViz);
+    })
+    .on('mouseout', function(d){
+      d3.select(this).classed('selected', false);
     });
     
   // Update the download button for the latest data. 
@@ -216,7 +248,6 @@ function dragstarted(d) {
 }
 
 function dragged(d) {
-    console.log('still dragging!');
     const current_x = d3.event.x;
     const current_y = d3.event.y;
     drawnLink.at({
@@ -255,4 +286,25 @@ function dragended(d) {
   currently_dragging = false;
 }
 
+const instructions = div.selectAppend('div.instructions')
+  .classed('hidden', true)
+  .html(
+    `
+    <h2> How to use </h2>
+    <p><strong>Add a node:</strong> Double click anywhere that doesn't already contain a node!</p>
+    <p><strong>Add a link:</strong> Click and drag between any two nodes.</p>
+    <p><strong>Change node group:</strong> Click on node to bring up tooltip, enter group in input box, press enter or click submit. </p>
+    <p><strong>Delete a node:</strong> Click node to bring up tooltip, press delete button.</p>
+    <p><strong>Delete a link:</strong> Hover over link to turn red, click.</p>
+    <p><strong>Close tooltip</strong> Double click off of tooltip. </p>
+    `
+  );
+  
+instructions.selectAppend('button.small')
+  .text('close')
+  .on('click', function(){
+    instructions.classed('hidden', true);
+  });
+  
+  
 drawNetwork(net_data,networkViz);
