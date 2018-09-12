@@ -38,6 +38,12 @@ const groupColors = d3.scaleOrdinal(d3.schemeAccent);
 div.classed('main', true);
 const svg = div.append('svg').at({height,width});
 const networkViz = svg.selectAppend('g.mainViz');
+svg.selectAppend('text.title')
+  .text('Network Builder')
+  .at({
+    x: 10,
+    y: 25,
+  });
 
 const tooltip = div.selectAppend('div.tooltip')
   .classed('hidden', true);
@@ -70,7 +76,7 @@ const instructionsButton = div.selectAppend('div.showInstruction')
   .append('button')
   .text('How to use')
   .on('click',function(){
-    instructions.classed('hidden', false)
+    instructions.classed('hidden', !instructions.classed('hidden'))
   })
   
 // the line that gets shown when the user is drawing a link.
@@ -254,12 +260,11 @@ function dragged(d) {
     const current_x = d3.event.x;
     const current_y = d3.event.y;
     drawnLink.at({
-      opacity: 1,
       x1: x(drag_hist.started.closest.x),
       x2: current_x,
       y1: y(drag_hist.started.closest.y),
       y2: current_y,
-    });
+    }).classed('hidden', false);
     tooltip.classed('hidden', true);
 }
 
@@ -285,7 +290,7 @@ function dragended(d) {
     drawNetwork(net_data,networkViz);
   }
   
-  drawnLink.attr('opacity', 0);
+  drawnLink.classed('hidden', true);
   currently_dragging = false;
 }
 
@@ -300,7 +305,10 @@ const instructions = div.selectAppend('div.instructions')
     <p><strong>Change node group:</strong> Click on node to bring up tooltip, enter group in input box, press enter or click submit. </p>
     <p><strong>Delete a node:</strong> Click node to bring up tooltip, press delete button.</p>
     <p><strong>Delete a link:</strong> Hover over link to turn red, click.</p>
-    <p><strong>Close tooltip</strong> Double click off of tooltip. </p>
+    <p><strong>Close tooltip:</strong> Double click off of tooltip. </p>
+    <p><strong>Download network:</strong> Click the download button in the bottom right to grab a JSON dump of your current network.</p>
+    <hr>
+    <p>Like this? Check out some more of my stuff at <a href = 'http://nickstrayer.me'> my website </a> or my blog <a href = 'https://livefreeordichotomize.com'>LiveFreeOrDichotomize.</a></p>
     `
   );
   
