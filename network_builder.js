@@ -23,7 +23,6 @@ let net_data = {
   ],
 };
 
-
 // scales for x and y and colors
 const x = d3.scaleLinear()
   .domain([0,1])
@@ -36,6 +35,7 @@ const y = d3.scaleLinear()
 const groupColors = d3.scaleOrdinal(d3.schemeAccent);
 
 
+div.classed('main', true);
 const svg = div.append('svg').at({height,width});
 const networkViz = svg.selectAppend('g.mainViz');
 
@@ -76,8 +76,8 @@ const instructionsButton = div.selectAppend('div.showInstruction')
 // the line that gets shown when the user is drawing a link.
 const drawnLink = svg.selectAppend("line.drawn")
   .at({
-    strokeWidth: 2, 
-    stroke: 'red',
+    strokeWidth: 4, 
+    stroke: '#fdcdac',
   });
 
 // when we submit the form we want to update our data. 
@@ -170,6 +170,9 @@ function drawNetwork(data,svg){
         
       deleteButton
        .on('click', function(){
+         // check to make sure this isn't our last node.
+         if(data.nodes.length === 1) return;
+         
          // get rid of node
          data.nodes = data.nodes.filter(node => node.id !== d.id);
          
@@ -291,6 +294,7 @@ const instructions = div.selectAppend('div.instructions')
   .html(
     `
     <h2> How to use </h2>
+    <hr>
     <p><strong>Add a node:</strong> Double click anywhere that doesn't already contain a node!</p>
     <p><strong>Add a link:</strong> Click and drag between any two nodes.</p>
     <p><strong>Change node group:</strong> Click on node to bring up tooltip, enter group in input box, press enter or click submit. </p>

@@ -1,3 +1,7 @@
+.main{
+  background: rgb(253, 246, 227);
+}
+
 div.tooltip {	
     position: absolute;			
     width: 150px;
@@ -33,7 +37,9 @@ button{
   height: 100%;
   font-family: optima;
   border-radius:10px;
+  background: #cbd5e8;
 }
+
 button.small{
   width: 100px;
   height: 30px;
@@ -64,9 +70,11 @@ button.small{
 
 div.instructions {
   position: absolute;
-  background: white;
+  background: #ffdcc5;
   width: 80%;
   top: 10px;
   padding: 10px;
   margin: 0 auto;
+  border-radius: 10px;
+  box-shadow: 3px 3px 3px
 }
